@@ -48,16 +48,22 @@ def test_change_is_none_without_previous_data(client, db_session):
     assert client.get("/api/stats/summary").json()["change_pct"] is None
 
 
-def test_restaurants_are_ranked_and_cost_per_cover_calculated(client, db_session):
+def test_restaurants_are_ranked_by_cost(client, db_session):
     add_entry(db_session, restaurant_id=1, kg=10, price=10)  # 100
     add_entry(db_session, restaurant_id=2, kg=5, price=10)  # 50
-    db_session.add(models.DailyCovers(restaurant_id=1, day=date.today(), covers=200))
-    db_session.commit()
 
     rows = client.get("/api/stats/restaurants").json()
     assert [r["restaurant_id"] for r in rows] == [1, 2]
-    assert rows[0]["cost_per_cover"] == pytest.approx(0.5)
-    assert rows[1]["cost_per_cover"] is None  # no covers recorded
+    assert rows[0]["total_cost"] == pytest.approx(100.0)
+    assert rows[1]["total_kg"] == pytest.approx(5.0)
+
+
+def test_restaurants_without_waste_are_listed_with_zero(client, db_session):
+    add_entry(db_session, restaurant_id=1)
+
+    rows = {r["restaurant_id"]: r for r in client.get("/api/stats/restaurants").json()}
+    assert rows[2]["total_cost"] == 0
+    assert rows[2]["entries"] == 0
 
 
 def test_ingredients_can_be_ranked_by_cost_or_weight(client, db_session):
@@ -102,18 +108,3 @@ def test_weekly_trend_groups_days_into_one_week(client, db_session):
 def test_invalid_date_range_rejected(client):
     res = client.get("/api/stats/summary", params={"date_from": "2026-02-01", "date_to": "2026-01-01"})
     assert res.status_code == 400
-
-
-def test_set_covers_creates_then_updates(client):
-    today = date.today().isoformat()
-    first = client.put("/api/covers", json={"restaurant_id": 1, "day": today, "covers": 120})
-    second = client.put("/api/covers", json={"restaurant_id": 1, "day": today, "covers": 150})
-
-    assert first.status_code == 200
-    assert second.json()["id"] == first.json()["id"]  # same row, updated
-    assert second.json()["covers"] == 150
-
-
-def test_set_covers_unknown_restaurant(client):
-    res = client.put("/api/covers", json={"restaurant_id": 99, "day": date.today().isoformat(), "covers": 10})
-    assert res.status_code == 404

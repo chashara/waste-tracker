@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint, func
+from sqlalchemy import Date, DateTime, Float, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -42,16 +42,3 @@ class WasteEntry(Base):
 
     restaurant: Mapped[Restaurant] = relationship()
     ingredient: Mapped[Ingredient] = relationship()
-
-
-class DailyCovers(Base):
-    """Customers served per restaurant per day. Lets us compare waste fairly between
-    busy and quiet restaurants."""
-
-    __tablename__ = "daily_covers"
-    __table_args__ = (UniqueConstraint("restaurant_id", "day"),)
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    restaurant_id: Mapped[int] = mapped_column(ForeignKey("restaurants.id"), index=True)
-    day: Mapped[date] = mapped_column(Date, index=True)
-    covers: Mapped[int] = mapped_column(Integer)

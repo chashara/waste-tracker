@@ -86,29 +86,16 @@ def restaurant_comparison(
     ).all()
     waste = {row.restaurant_id: row for row in waste_rows}
 
-    covers_rows = db.execute(
-        select(models.DailyCovers.restaurant_id, func.sum(models.DailyCovers.covers))
-        .where(models.DailyCovers.day >= start, models.DailyCovers.day <= end)
-        .group_by(models.DailyCovers.restaurant_id)
-    ).all()
-    covers = {restaurant_id: int(total) for restaurant_id, total in covers_rows}
-
     result = []
     for restaurant in db.scalars(select(models.Restaurant)).all():
         row = waste.get(restaurant.id)
-        cost = float(row.cost) if row else 0.0
-        kg = float(row.kg) if row else 0.0
-        count = int(row.n) if row else 0
-        restaurant_covers = covers.get(restaurant.id, 0)
         result.append(
             RestaurantStatsOut(
                 restaurant_id=restaurant.id,
                 restaurant_name=restaurant.name,
-                total_cost=round(cost, 2),
-                total_kg=round(kg, 2),
-                entries=count,
-                covers=restaurant_covers,
-                cost_per_cover=round(cost / restaurant_covers, 3) if restaurant_covers > 0 else None,
+                total_cost=round(float(row.cost), 2) if row else 0.0,
+                total_kg=round(float(row.kg), 2) if row else 0.0,
+                entries=int(row.n) if row else 0,
             )
         )
     result.sort(key=lambda item: item.total_cost, reverse=True)

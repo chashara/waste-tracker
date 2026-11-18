@@ -31,7 +31,6 @@ function Toggle({ options, value, onChange }) {
 export default function DashboardPage() {
   const [days, setDays] = useState(30);
   const [restaurantId, setRestaurantId] = useState("");
-  const [comparison, setComparison] = useState("total");
   const [ingredientSort, setIngredientSort] = useState("cost");
 
   const range = { date_from: daysAgoISO(days - 1), date_to: todayISO() };
@@ -112,20 +111,10 @@ export default function DashboardPage() {
 
       <Panel
         title="Restaurant comparison"
-        subtitle="Always shows all restaurants. Per customer is the fairest way to compare a busy and a quiet one."
+        subtitle="Always shows all restaurants, whichever one is selected above."
         state={comparisonData}
-        controls={
-          <Toggle
-            options={[
-              ["total", "Total"],
-              ["perCover", "Per customer"],
-            ]}
-            value={comparison}
-            onChange={setComparison}
-          />
-        }
       >
-        {(rows) => <RestaurantChart rows={rows} metric={comparison} colorOf={colorOf} />}
+        {(rows) => <RestaurantChart rows={rows} colorOf={colorOf} />}
       </Panel>
 
       <div className="two-col">

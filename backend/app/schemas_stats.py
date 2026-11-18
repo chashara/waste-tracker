@@ -20,8 +20,6 @@ class RestaurantStatsOut(BaseModel):
     total_cost: float
     total_kg: float
     entries: int
-    covers: int
-    cost_per_cover: Optional[float] = None
 
 
 class IngredientStatsOut(BaseModel):

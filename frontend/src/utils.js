@@ -35,8 +35,7 @@ export function formatMoney(value) {
   return new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(value);
 }
 
-// Cost per customer is small, so it needs three decimals
-export const formatPerCover = (value) => `€${Number(value).toFixed(3)}`;
+
 
 export function formatKg(value) {
   return `${Number(Number(value).toFixed(3))} kg`;
