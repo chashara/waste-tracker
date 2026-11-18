@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from . import models, schemas
 from .database import Base, engine, get_db
-from .routers import waste
+from .routers import covers, stats, waste
 
 
 @asynccontextmanager
@@ -31,6 +31,8 @@ app.add_middleware(
 )
 
 app.include_router(waste.router)
+app.include_router(covers.router)
+app.include_router(stats.router)
 
 
 @app.get("/api/health")

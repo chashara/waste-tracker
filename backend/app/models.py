@@ -1,6 +1,7 @@
 from datetime import date, datetime
+from typing import Optional
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, String, func
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -21,7 +22,7 @@ class Ingredient(Base):
     category: Mapped[str] = mapped_column(String(50))
     price_per_kg: Mapped[float] = mapped_column(Float)
     # For items counted in pieces (eggs, bread rolls): average weight of one piece
-    grams_per_piece: Mapped[float | None] = mapped_column(Float, nullable=True)
+    grams_per_piece: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
 
 class WasteEntry(Base):
@@ -35,9 +36,22 @@ class WasteEntry(Base):
     # an ingredient's price later doesn't rewrite the cost of old waste.
     price_per_kg: Mapped[float] = mapped_column(Float)
     reason: Mapped[str] = mapped_column(String(30))
-    note: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    note: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     waste_date: Mapped[date] = mapped_column(Date, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     restaurant: Mapped[Restaurant] = relationship()
     ingredient: Mapped[Ingredient] = relationship()
+
+
+class DailyCovers(Base):
+    """Customers served per restaurant per day. Lets us compare waste fairly between
+    busy and quiet restaurants."""
+
+    __tablename__ = "daily_covers"
+    __table_args__ = (UniqueConstraint("restaurant_id", "day"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    restaurant_id: Mapped[int] = mapped_column(ForeignKey("restaurants.id"), index=True)
+    day: Mapped[date] = mapped_column(Date, index=True)
+    covers: Mapped[int] = mapped_column(Integer)
