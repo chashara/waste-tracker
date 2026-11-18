@@ -28,7 +28,7 @@ class IngredientOut(BaseModel):
 class WasteEntryCreate(BaseModel):
     restaurant_id: int
     ingredient_id: int
-    amount: float = Field(gt=0, le=10000)
+    amount: float = Field(gt=0, le=1_000_000)
     unit: Unit = "kg"
     reason: Reason
     note: Optional[str] = Field(default=None, max_length=200)
