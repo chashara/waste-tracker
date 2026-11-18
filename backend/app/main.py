@@ -1,5 +1,6 @@
 import os
 from contextlib import asynccontextmanager
+from typing import Optional
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from . import models, schemas
 from .database import Base, engine, get_db
+from .routers import waste
 
 
 @asynccontextmanager
@@ -28,6 +30,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(waste.router)
+
 
 @app.get("/api/health")
 def health():
@@ -40,7 +44,7 @@ def list_restaurants(db: Session = Depends(get_db)):
 
 
 @app.get("/api/ingredients", response_model=list[schemas.IngredientOut])
-def list_ingredients(search: str | None = None, db: Session = Depends(get_db)):
+def list_ingredients(search: Optional[str] = None, db: Session = Depends(get_db)):
     query = select(models.Ingredient).order_by(models.Ingredient.name)
     if search:
         query = query.where(models.Ingredient.name.ilike(f"%{search}%"))
