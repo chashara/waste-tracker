@@ -108,3 +108,25 @@ def test_weekly_trend_groups_days_into_one_week(client, db_session):
 def test_invalid_date_range_rejected(client):
     res = client.get("/api/stats/summary", params={"date_from": "2026-02-01", "date_to": "2026-01-01"})
     assert res.status_code == 400
+
+def test_summary_can_compare_against_a_chosen_period(client, db_session):
+    today = date.today()
+    add_entry(db_session, kg=3, price=10, day=today)  # current period: 30
+    add_entry(db_session, kg=1, price=10, day=today - timedelta(days=100))  # chosen comparison period: 10
+
+    body = client.get(
+        "/api/stats/summary",
+        params={
+            "date_from": today.isoformat(),
+            "date_to": today.isoformat(),
+            "compare_from": (today - timedelta(days=101)).isoformat(),
+            "compare_to": (today - timedelta(days=99)).isoformat(),
+        },
+    ).json()
+    assert body["previous_cost"] == pytest.approx(10.0)
+    assert body["change_pct"] == pytest.approx(200.0)
+
+
+def test_summary_rejects_backwards_comparison_period(client):
+    res = client.get("/api/stats/summary", params={"compare_from": "2026-02-01", "compare_to": "2026-01-01"})
+    assert res.status_code == 400

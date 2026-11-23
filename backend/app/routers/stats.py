@@ -49,12 +49,20 @@ def summary(
     restaurant_id: Optional[int] = None,
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
+    compare_from: Optional[date] = None,
+    compare_to: Optional[date] = None,
     db: Session = Depends(get_db),
 ):
     start, end = resolve_range(date_from, date_to)
-    length = (end - start).days + 1
-    prev_end = start - timedelta(days=1)
-    prev_start = prev_end - timedelta(days=length - 1)
+
+    if compare_from is not None and compare_to is not None:
+        # The caller chose the period to compare with (for example the previous month)
+        prev_start, prev_end = resolve_range(compare_from, compare_to)
+    else:
+        # Default: the period of the same length right before this one
+        length = (end - start).days + 1
+        prev_end = start - timedelta(days=1)
+        prev_start = prev_end - timedelta(days=length - 1)
 
     cost, kg, count = totals(db, start, end, restaurant_id)
     prev_cost, _, _ = totals(db, prev_start, prev_end, restaurant_id)
@@ -69,7 +77,6 @@ def summary(
         previous_cost=round(prev_cost, 2),
         change_pct=change,
     )
-
 
 @router.get("/restaurants", response_model=list[RestaurantStatsOut])
 def restaurant_comparison(

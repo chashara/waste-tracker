@@ -14,7 +14,16 @@ import RestaurantChart from "../components/RestaurantChart";
 import StatCard from "../components/StatCard";
 import TrendChart from "../components/TrendChart";
 import { useAsync } from "../hooks/useAsync";
-import { CHART_COLORS, daysAgoISO, formatKg, formatMoney, todayISO } from "../utils";
+import {
+  CHART_COLORS,
+  daysAgoISO,
+  formatKg,
+  formatMoney,
+  monthRange,
+  previousMonthRange,
+  recentMonths,
+  todayISO,
+} from "../utils";
 
 function Toggle({ options, value, onChange }) {
   return (
@@ -28,24 +37,30 @@ function Toggle({ options, value, onChange }) {
   );
 }
 
+const MONTHS = recentMonths(24);
+
 export default function DashboardPage() {
-  const [days, setDays] = useState(30);
+  const [mode, setMode] = useState(30); // 7, 30, 90 or "month"
+  const [month, setMonth] = useState(MONTHS[0].value);
   const [restaurantId, setRestaurantId] = useState("");
   const [ingredientSort, setIngredientSort] = useState("cost");
 
-  const range = { date_from: daysAgoISO(days - 1), date_to: todayISO() };
+  const isMonth = mode === "month";
+  const range = isMonth ? monthRange(month) : { date_from: daysAgoISO(mode - 1), date_to: todayISO() };
+  const compare = isMonth ? previousMonthRange(month, range.date_to) : {};
   const filter = { ...range, restaurant_id: restaurantId };
-  const interval = days <= 31 ? "day" : "week";
+  const interval = mode === 90 ? "week" : "day";
+  const rangeDeps = [range.date_from, range.date_to];
 
   const restaurants = useAsync(getRestaurants, []);
-  const summary = useAsync(() => getSummary(filter), [days, restaurantId]);
-  const comparisonData = useAsync(() => getRestaurantStats(range), [days]);
+  const summary = useAsync(() => getSummary({ ...filter, ...compare }), [...rangeDeps, restaurantId]);
+  const comparisonData = useAsync(() => getRestaurantStats(range), rangeDeps);
   const ingredients = useAsync(
     () => getIngredientStats({ ...filter, sort_by: ingredientSort, limit: 10 }),
-    [days, restaurantId, ingredientSort]
+    [...rangeDeps, restaurantId, ingredientSort]
   );
-  const reasons = useAsync(() => getReasonStats(filter), [days, restaurantId]);
-  const trend = useAsync(() => getTrend({ ...filter, interval }), [days, restaurantId]);
+  const reasons = useAsync(() => getReasonStats(filter), [...rangeDeps, restaurantId]);
+  const trend = useAsync(() => getTrend({ ...filter, interval }), [...rangeDeps, restaurantId]);
 
   // Each restaurant keeps the same color in every chart
   const colorOf = useMemo(() => {
@@ -81,10 +96,20 @@ export default function DashboardPage() {
               [7, "7 days"],
               [30, "30 days"],
               [90, "90 days"],
+              ["month", "Month"],
             ]}
-            value={days}
-            onChange={setDays}
+            value={mode}
+            onChange={setMode}
           />
+          {isMonth && (
+            <select className="input filter-select" value={month} onChange={(e) => setMonth(e.target.value)}>
+              {MONTHS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          )}
           <select className="input filter-select" value={restaurantId} onChange={(e) => setRestaurantId(e.target.value)}>
             <option value="">All restaurants</option>
             {restaurants.data.map((r) => (
@@ -101,7 +126,7 @@ export default function DashboardPage() {
         <StatCard label="Waste cost" value={s ? formatMoney(s.total_cost) : "..."} />
         <StatCard label="Weight" value={s ? formatKg(s.total_kg) : "..."} />
         <StatCard
-          label="Vs previous period"
+          label={isMonth ? "Vs previous month" : "Vs previous period"}
           value={changeText}
           tone={changeTone}
           hint={s ? `previous: ${formatMoney(s.previous_cost)}` : undefined}
